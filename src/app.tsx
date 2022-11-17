@@ -52,11 +52,14 @@ const App = (props: AppProps) => {
 
     const puppeteer = process.env.DOCKERIZED
         ? {
-              headless: true,
-              args: ["--no-sandbox"],
-              executablePath: "google-chrome-stable",
-          }
-        : {};
+            headless: true,
+            args: ["--no-sandbox"],
+            executablePath: "google-chrome-stable",
+        }
+        : {
+            headless: true,
+            args: ["--no-sandbox"],
+        };
 
     useEffect(() => {
         qrcode.toString("asdfasda234sdfsdfs123456g", { type: "terminal", small: true }, (err, buffer) => {
@@ -250,7 +253,7 @@ const App = (props: AppProps) => {
                                 const mentionIdentifier = mention
                                     .substring(1)
                                     .replaceAll("+", "")
-                                    .replaceAll('"', "")
+                                    .replaceAll("\"", "")
                                     .replaceAll("'", "")
                                     .toLowerCase();
                                 const participantIdentifier = `${participant.id.user}@${participant.id.server}`;

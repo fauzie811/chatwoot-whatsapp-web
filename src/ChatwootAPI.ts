@@ -81,6 +81,14 @@ export class ChatwootAPI {
         }
 
         if (chatwootConversation == null) {
+            if (!sourceId) {
+                const contactInbox: any = await this.makeChatwootContactInbox(
+                    chatwootContact.id,
+                    whatsappWebChatwootInboxId
+                );
+                sourceId = contactInbox.source_id;
+            }
+
             chatwootConversation = await this.makeChatwootConversation(
                 sourceId,
                 whatsappWebChatwootInboxId,
@@ -145,6 +153,22 @@ export class ChatwootAPI {
             name: name,
             phone_number: phoneNumber,
             identifier: identifier,
+        };
+
+        const {
+            data: { payload },
+        } = <{ data: Record<string, unknown> }>(
+            await axios.post(chatwootAPIUrl + contactsEndPoint, contactPayload, { headers: headers })
+        );
+        return payload;
+    }
+
+    async makeChatwootContactInbox(contactId: string | number, inboxId: string | number) {
+        const { chatwootAccountId, chatwootAPIUrl, headers } = this;
+        const contactsEndPoint = `/accounts/${chatwootAccountId}/contacts/${contactId}/contact_inboxes`;
+
+        const contactPayload = {
+            inbox_id: inboxId,
         };
 
         const {
