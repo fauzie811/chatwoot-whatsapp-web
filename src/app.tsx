@@ -1,10 +1,11 @@
-import fs from "fs";
-import dotenv from "dotenv";
-import express, { Express } from "express";
-import { Server } from "http";
-import axios from "axios";
-import qrcode from "qrcode";
-import humps from "humps";
+import fs from 'fs';
+import dotenv from 'dotenv';
+import express, { Express } from 'express';
+import { Server } from 'http';
+import axios from 'axios';
+import qrcode from 'qrcode';
+import humps from 'humps';
+import argsParser from 'args-parser';
 import {
     Client,
     Contact,
@@ -14,13 +15,13 @@ import {
     LocalAuth,
     MessageContent,
     MessageMedia,
-} from "whatsapp-web.js";
-import { ChatwootAPI } from "./ChatwootAPI";
-import { ChatwootMessage } from "./types";
-import { Readable } from "stream";
-import FormData from "form-data";
-import React, { useState, useEffect } from "react";
-import { Box, Newline, render, Spacer, Text } from "ink";
+} from 'whatsapp-web.js';
+import { ChatwootAPI } from './ChatwootAPI';
+import { ChatwootMessage } from './types';
+import { Readable } from 'stream';
+import FormData from 'form-data';
+import React, { useState, useEffect } from 'react';
+import { Box, Newline, render, Spacer, Text } from 'ink';
 
 if (
     !process.env.CHATWOOT_API_URL ||
@@ -31,13 +32,19 @@ if (
 ) {
     // assert that required envs are set or try to fallback to file
     try {
-        fs.accessSync(".env", fs.constants.F_OK);
+        fs.accessSync('.env', fs.constants.F_OK);
         dotenv.config();
     } catch {
-        console.error("ENV vars aren't set.");
+        console.error('ENV vars aren\'t set.');
         process.exit(16);
     }
 }
+
+const args = argsParser(process.argv);
+const port = args['port'] ?? process.env.PORT ?? 8080;
+const accountId = args['account-id'] ?? process.env.CHATWOOT_ACCOUNT_ID ?? '';
+const inboxId = args['inbox-id'] ?? process.env.CHATWOOT_WW_INBOX_ID ?? '';
+const clientId = args['session-id'] ?? 'default';
 
 interface AppProps {
     express: Express;
@@ -46,23 +53,23 @@ interface AppProps {
 
 const App = (props: AppProps) => {
     const { express, server } = props;
-    const [whatsappStatus, setWhatsappStatus] = useState("Initializing WhatsApp Web...");
-    const [appStatus, setAppStatus] = useState("Press ctrl+c to stop.");
-    const [qr, setQr] = useState("");
+    const [whatsappStatus, setWhatsappStatus] = useState('Initializing WhatsApp Web...');
+    const [appStatus, setAppStatus] = useState('Press ctrl+c to stop.');
+    const [qr, setQr] = useState('');
 
     const puppeteer = process.env.DOCKERIZED
         ? {
             headless: true,
-            args: ["--no-sandbox"],
-            executablePath: "google-chrome-stable",
+            args: ['--no-sandbox'],
+            executablePath: 'google-chrome-stable',
         }
         : {
             headless: true,
-            args: ["--no-sandbox"],
+            args: ['--no-sandbox'],
         };
 
     useEffect(() => {
-        qrcode.toString("asdfasda234sdfsdfs123456g", { type: "terminal", small: true }, (err, buffer) => {
+        qrcode.toString('asdfasda234sdfsdfs123456g', { type: 'terminal', small: true }, (err, buffer) => {
             if (!err) {
                 setQr(buffer);
                 //console.log(buffer);
@@ -72,7 +79,7 @@ const App = (props: AppProps) => {
         });
 
         const whatsappWebClient = new Client({
-            authStrategy: new LocalAuth(),
+            authStrategy: new LocalAuth({ clientId }),
             puppeteer: {
                 handleSIGINT: false,
                 ...puppeteer,
@@ -80,18 +87,18 @@ const App = (props: AppProps) => {
         });
 
         const chatwootAPI: ChatwootAPI = new ChatwootAPI(
-            process.env.CHATWOOT_API_URL ?? "",
-            process.env.CHATWOOT_API_KEY ?? "",
-            process.env.CHATWOOT_ACCOUNT_ID ?? "",
-            process.env.CHATWOOT_WW_INBOX_ID ?? "",
-            process.env.CHATWOOT_WW_GROUP_PARTICIPANTS_ATTRIBUTE_NAME ?? "",
+            process.env.CHATWOOT_API_URL ?? '',
+            process.env.CHATWOOT_API_KEY ?? '',
+            accountId,
+            inboxId,
+            process.env.CHATWOOT_WW_GROUP_PARTICIPANTS_ATTRIBUTE_NAME ?? '',
             whatsappWebClient
         );
 
-        whatsappWebClient.on("qr", (qr) => {
-            setWhatsappStatus("WhatsApp needs to connect, use the following to QR to authorize it.");
+        whatsappWebClient.on('qr', (qr) => {
+            setWhatsappStatus('WhatsApp needs to connect, use the following to QR to authorize it.');
 
-            qrcode.toString(qr, { type: "terminal", small: true }, (err, buffer) => {
+            qrcode.toString(qr, { type: 'terminal', small: true }, (err, buffer) => {
                 if (!err) {
                     setQr(buffer);
                     //console.log(buffer);
@@ -106,24 +113,24 @@ const App = (props: AppProps) => {
 
                     const form = new FormData();
 
-                    form.append("token", process.env.SLACK_TOKEN ?? "");
-                    form.append("channels", process.env.SLACK_CHANNEL_ID ?? "");
-                    form.append("title", "QR Code");
-                    form.append("initial_comment", "WahtsApp needs to connect, use this code to authorize your number:");
+                    form.append('token', process.env.SLACK_TOKEN ?? '');
+                    form.append('channels', process.env.SLACK_CHANNEL_ID ?? '');
+                    form.append('title', 'QR Code');
+                    form.append('initial_comment', 'WahtsApp needs to connect, use this code to authorize your number:');
                     form.append(
-                        "file",
+                        'file',
                         new Readable({
                             read() {
                                 this.push(buffer);
                                 this.push(null);
                             },
                         }),
-                        "qr.png"
+                        'qr.png'
                     );
 
                     if (!err) {
                         axios
-                            .postForm("https://slack.com/api/files.upload", form, {
+                            .postForm('https://slack.com/api/files.upload', form, {
                                 headers: form.getHeaders(),
                             })
                             .then((response) => {
@@ -139,12 +146,12 @@ const App = (props: AppProps) => {
             }
         });
 
-        whatsappWebClient.on("ready", () => {
-            setWhatsappStatus("WhatsApp client is ready!");
-            setQr("");
+        whatsappWebClient.on('ready', () => {
+            setWhatsappStatus('WhatsApp client is ready!');
+            setQr('');
         });
 
-        whatsappWebClient.on("message", async (message) => {
+        whatsappWebClient.on('message', async (message) => {
             let attachment = null;
             if (message.hasMedia) {
                 attachment = await message.downloadMedia();
@@ -159,24 +166,24 @@ const App = (props: AppProps) => {
                 messagePrefix = `${authorContact.name ?? authorContact.pushname ?? authorContact.number}: `;
             }
 
-            chatwootAPI.broadcastMessageToChatwoot(message, "incoming", attachment, messagePrefix);
+            chatwootAPI.broadcastMessageToChatwoot(message, 'incoming', attachment, messagePrefix);
         });
 
-        whatsappWebClient.on("message_create", async (message) => {
+        whatsappWebClient.on('message_create', async (message) => {
             if (message.fromMe) {
                 let attachment: MessageMedia | undefined;
                 const rawData: any = message.rawData;
                 //broadcast WA message to chatwoot only if it was created
                 //from a real device/wa web and not from chatwoot app
                 //to avoid endless loop
-                if (rawData.self == "in") {
+                if (rawData.self == 'in') {
                     if (message.hasMedia) {
                         attachment = await message.downloadMedia();
                     }
 
                     chatwootAPI.broadcastMessageToChatwoot(
                         message,
-                        "outgoing",
+                        'outgoing',
                         attachment,
                         process.env.REMOTE_PRIVATE_MESSAGE_PREFIX
                     );
@@ -184,28 +191,28 @@ const App = (props: AppProps) => {
             }
         });
 
-        whatsappWebClient.on("group_join", async (groupNotification: GroupNotification) => {
+        whatsappWebClient.on('group_join', async (groupNotification: GroupNotification) => {
             const groupChat: GroupChat = (await groupNotification.getChat()) as GroupChat;
             chatwootAPI.updateChatwootConversationGroupParticipants(groupChat);
         });
 
-        whatsappWebClient.on("group_leave", async (groupNotification: GroupNotification) => {
+        whatsappWebClient.on('group_leave', async (groupNotification: GroupNotification) => {
             const groupChat: GroupChat = (await groupNotification.getChat()) as GroupChat;
             chatwootAPI.updateChatwootConversationGroupParticipants(groupChat);
         });
 
         whatsappWebClient.initialize().catch((err) => {
-            setWhatsappStatus("Error: Unable to initialize WhatsApp.");
+            setWhatsappStatus('Error: Unable to initialize WhatsApp.');
         });
 
-        express.get("/", async (req, res) => {
+        express.get('/', async (req, res) => {
             res.status(200).json({
-                status: "OK",
+                status: 'OK',
                 req: req.ip,
             });
         });
 
-        express.post("/chatwootMessage", async (req, res) => {
+        express.post('/chatwootMessage', async (req, res) => {
             try {
                 //const chatwootMessage: ChatwootMessage = humps.camelizeKeys(req.body);
                 const { token } = req.query;
@@ -214,7 +221,7 @@ const App = (props: AppProps) => {
                 //quick authentication with chatwoot api key
                 if (process.env.CHATWOOT_WEBHOOK_TOKEN && token != process.env.CHATWOOT_WEBHOOK_TOKEN) {
                     res.status(401).json({
-                        result: "Unauthorized access. Please provide a valid token.",
+                        result: 'Unauthorized access. Please provide a valid token.',
                     });
 
                     return;
@@ -223,9 +230,9 @@ const App = (props: AppProps) => {
                 const whatsappWebClientState = await whatsappWebClient.getState();
                 //post to whatsapp only if we are connected to the client and message is not private
                 if (
-                    whatsappWebClientState === "CONNECTED" &&
-                    chatwootMessage.inbox.id == process.env.CHATWOOT_WW_INBOX_ID &&
-                    chatwootMessage.message_type == "outgoing" &&
+                    whatsappWebClientState === 'CONNECTED' &&
+                    chatwootMessage.inbox.id == inboxId &&
+                    chatwootMessage.message_type == 'outgoing' &&
                     !chatwootMessage.private
                 ) {
                     const chatwootContact = await chatwootAPI.getChatwootContactById(
@@ -252,9 +259,9 @@ const App = (props: AppProps) => {
                             for (const participant of groupParticipants) {
                                 const mentionIdentifier = mention
                                     .substring(1)
-                                    .replaceAll("+", "")
-                                    .replaceAll("\"", "")
-                                    .replaceAll("'", "")
+                                    .replaceAll('+', '')
+                                    .replaceAll('"', '')
+                                    .replaceAll('\'', '')
                                     .toLowerCase();
                                 const participantIdentifier = `${participant.id.user}@${participant.id.server}`;
                                 const contact: Contact = await whatsappWebClient.getContactById(participantIdentifier);
@@ -272,14 +279,14 @@ const App = (props: AppProps) => {
                         options.mentions = whatsappMentions;
                     }
 
-                    if (process.env.PREFIX_AGENT_NAME_ON_MESSAGES == "true") {
+                    if (process.env.PREFIX_AGENT_NAME_ON_MESSAGES == 'true') {
                         let senderName = chatwootMessage.sender?.name;
                         if (chatwootMessage.conversation.messages != null && chatwootMessage.conversation.messages.length > 0) {
                             const sender = chatwootMessage.conversation.messages[0].sender;
                             senderName = sender.available_name ?? sender.name;
                         }
 
-                        formattedMessage = `${senderName}: ${formattedMessage ?? ""}`;
+                        formattedMessage = `${senderName}: ${formattedMessage ?? ''}`;
                     }
 
                     if (messageData.attachments != null && messageData.attachments.length > 0) {
@@ -298,19 +305,19 @@ const App = (props: AppProps) => {
                     }
                 }
 
-                res.status(200).json({ result: "message_sent_succesfully" });
+                res.status(200).json({ result: 'message_sent_succesfully' });
             } catch {
-                res.status(400).json({ result: "exception_error" });
+                res.status(400).json({ result: 'exception_error' });
             }
         });
 
         // add gracefull closing
-        process.on("SIGINT", async () => {
-            setAppStatus("SIGINT signal received: closing HTTP server...");
+        process.on('SIGINT', async () => {
+            setAppStatus('SIGINT signal received: closing HTTP server...');
 
             server.close(() => {
                 whatsappWebClient.destroy().finally(() => {
-                    setAppStatus("Server closed.");
+                    setAppStatus('Server closed.');
                     process.exitCode = 0;
                     process.exit(0);
                 });
@@ -326,7 +333,7 @@ const App = (props: AppProps) => {
                         <Text bold>Express</Text>
 
                         <Box padding={1}>
-                            <Text color="green">Server listening on {process.env.PORT ?? ""}.</Text>
+                            <Text color="green">Server listening on {port}.</Text>
                         </Box>
                     </Box>
                     <Box flexDirection="column">
@@ -334,7 +341,7 @@ const App = (props: AppProps) => {
                         <Box padding={1} flexDirection="column">
                             <Text color="white">{whatsappStatus}</Text>
                             <Newline />
-                            {qr !== "" && (
+                            {qr !== '' && (
                                 <Box>
                                     <Text>{qr}</Text>
                                 </Box>
@@ -360,6 +367,6 @@ expressApp.use(
 );
 
 //init api server
-const server = expressApp.listen(process.env.PORT ?? "", () => {
+const server = expressApp.listen(port, () => {
     render(<App express={expressApp} server={server} />);
 });
