@@ -152,6 +152,10 @@ const App = (props: AppProps) => {
         });
 
         whatsappWebClient.on('message', async (message) => {
+            if (message.isStatus) {
+                return;
+            }
+
             let attachment = null;
             if (message.hasMedia) {
                 attachment = await message.downloadMedia();
