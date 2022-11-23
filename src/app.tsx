@@ -35,7 +35,7 @@ if (
         fs.accessSync('.env', fs.constants.F_OK);
         dotenv.config();
     } catch {
-        console.error('ENV vars aren\'t set.');
+        console.error("ENV vars aren't set.");
         process.exit(16);
     }
 }
@@ -59,14 +59,14 @@ const App = (props: AppProps) => {
 
     const puppeteer = process.env.DOCKERIZED
         ? {
-            headless: true,
-            args: ['--no-sandbox'],
-            executablePath: 'google-chrome-stable',
-        }
+              headless: true,
+              args: ['--no-sandbox'],
+              executablePath: 'google-chrome-stable',
+          }
         : {
-            headless: true,
-            args: ['--no-sandbox'],
-        };
+              headless: true,
+              args: ['--no-sandbox'],
+          };
 
     useEffect(() => {
         qrcode.toString('asdfasda234sdfsdfs123456g', { type: 'terminal', small: true }, (err, buffer) => {
@@ -265,7 +265,7 @@ const App = (props: AppProps) => {
                                     .substring(1)
                                     .replaceAll('+', '')
                                     .replaceAll('"', '')
-                                    .replaceAll('\'', '')
+                                    .replaceAll("'", '')
                                     .toLowerCase();
                                 const participantIdentifier = `${participant.id.user}@${participant.id.server}`;
                                 const contact: Contact = await whatsappWebClient.getContactById(participantIdentifier);
@@ -291,6 +291,16 @@ const App = (props: AppProps) => {
                         }
 
                         formattedMessage = `${senderName}: ${formattedMessage ?? ''}`;
+                    }
+
+                    if (process.env.AGENT_NAME_SIGNATUR_ON_MESSAGES == 'true') {
+                        let senderName = chatwootMessage.sender?.name;
+                        if (chatwootMessage.conversation.messages != null && chatwootMessage.conversation.messages.length > 0) {
+                            const sender = chatwootMessage.conversation.messages[0].sender;
+                            senderName = sender.available_name ?? sender.name;
+                        }
+
+                        formattedMessage = `${formattedMessage ?? ''}\n\n*${senderName}*`;
                     }
 
                     if (messageData.attachments != null && messageData.attachments.length > 0) {

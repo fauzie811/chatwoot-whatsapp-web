@@ -1,7 +1,7 @@
-import axios, { AxiosRequestHeaders } from "axios";
-import { Message, Chat, GroupChat, Client, Contact } from "whatsapp-web.js";
-import FormData from "form-data";
-import MimeTypes from "mime-types";
+import axios, { AxiosRequestHeaders } from 'axios';
+import { Message, Chat, GroupChat, Client, Contact } from 'whatsapp-web.js';
+import FormData from 'form-data';
+import MimeTypes from 'mime-types';
 
 export class ChatwootAPI {
     private headers: AxiosRequestHeaders | undefined;
@@ -33,9 +33,9 @@ export class ChatwootAPI {
         const { whatsappWebChatwootInboxId, whatsappWebClient } = this;
 
         let chatwootConversation: any = null;
-        let sourceId: string | number = "";
-        let contactNumber = "";
-        let contactName = "";
+        let sourceId: string | number = '';
+        let contactNumber = '';
+        let contactName = '';
         const messageChat: Chat = await message.getChat();
         const contactIdentifier = `${messageChat.id.user}@${messageChat.id.server}`;
 
@@ -82,10 +82,7 @@ export class ChatwootAPI {
 
         if (chatwootConversation == null) {
             if (!sourceId) {
-                const contactInbox: any = await this.makeChatwootContactInbox(
-                    chatwootContact.id,
-                    whatsappWebChatwootInboxId
-                );
+                const contactInbox: any = await this.makeChatwootContactInbox(chatwootContact.id, whatsappWebChatwootInboxId);
                 sourceId = contactInbox.source_id;
             }
 
@@ -106,7 +103,7 @@ export class ChatwootAPI {
         //therefore we mark it as private so we can filter it
         //when receiving it from the webhook (in later steps) to avoid duplicated messages
         let isPrivate = false;
-        if (type == "outgoing") {
+        if (type == 'outgoing') {
             isPrivate = true;
         }
 
@@ -216,12 +213,12 @@ export class ChatwootAPI {
             const participantIdentifier = `${participant.id.user}@${participant.id.server}`;
             const participantContact: Contact = await whatsappWebClient.getContactById(participantIdentifier);
             const participantName: string =
-                participantContact.name ?? participantContact.pushname ?? "+" + participantContact.number;
+                participantContact.name ?? participantContact.pushname ?? '+' + participantContact.number;
             const participantLabel = `[${participantName} - +${participantContact.number}]`;
             participantLabels.push(participantLabel);
         }
         const conversationCustomAttributes = {
-            custom_attributes: { [this.whatsappWebGroupParticipantsAttributeName]: participantLabels.join(",") },
+            custom_attributes: { [this.whatsappWebGroupParticipantsAttributeName]: participantLabels.join(',') },
         };
 
         const chatwootContact = await this.findChatwootContact(contactIdentifier);
@@ -258,17 +255,17 @@ export class ChatwootAPI {
             message = messagePrefix + message;
         }
 
-        bodyFormData.append("content", message);
-        bodyFormData.append("message_type", type);
-        bodyFormData.append("private", isPrivate.toString());
+        bodyFormData.append('content', message);
+        bodyFormData.append('message_type', type);
+        bodyFormData.append('private', isPrivate.toString());
 
         const headers: AxiosRequestHeaders = { ...this.headers, ...bodyFormData.getHeaders() };
 
         if (attachment != null) {
-            const buffer = Buffer.from(attachment.data, "base64");
+            const buffer = Buffer.from(attachment.data, 'base64');
             const extension = MimeTypes.extension(attachment.mimetype);
-            const attachmentFilename = attachment.filename ?? "attachment." + extension;
-            bodyFormData.append("attachments[]", buffer, attachmentFilename);
+            const attachmentFilename = attachment.filename ?? 'attachment.' + extension;
+            bodyFormData.append('attachments[]', buffer, attachmentFilename);
         }
 
         const { data } = <{ data: Record<string, unknown> }>await axios.postForm(
